@@ -1,4 +1,5 @@
 const { loadData, saveData } = require("../utils/save");
+
 const {
   EmbedBuilder,
   ActionRowBuilder,
@@ -7,12 +8,9 @@ const {
 } = require("discord.js");
 
 
-const POINTS_FILE = "points.json";
-
-
 const WHEEL_CHANNEL_ID = "1529158985725251624";
-const COST = 1000;
 
+const COST = 1000;
 
 const LUCK_ROLE_ID = "1529150264022401165";
 const SPECIAL_ROLE_ID = "1529155524028010637";
@@ -21,20 +19,15 @@ const SPECIAL_ROLE_ID = "1529155524028010637";
 module.exports = (client) => {
 
 
-  let points = loadData(
-    POINTS_FILE,
-    {}
-  );
-
-
-  function savePoints() {
+  function savePoints(points) {
 
     saveData(
-      POINTS_FILE,
+      "points.json",
       points
     );
 
   }
+
 
 
   client.on(
@@ -51,27 +44,45 @@ module.exports = (client) => {
 
 
 
-      const userId = interaction.user.id;
+      // טעינה מחדש בכל סיבוב
+      let points = loadData(
+        "points.json",
+        {}
+      );
+
+
+
+      const userId =
+        interaction.user.id;
+
 
 
       if (!points[userId]) {
+
         points[userId] = 0;
+
       }
 
 
 
       if (points[userId] < COST) {
 
-        const msg = await interaction.reply({
-          content: "❌ אין לך מספיק נקודות",
-          ephemeral: true,
-          fetchReply: true
+
+        await interaction.reply({
+
+          content:
+          "❌ אין לך מספיק נקודות",
+
+          ephemeral: true
+
         });
 
 
         setTimeout(() => {
+
           interaction.deleteReply()
-            .catch(()=>{});
+          .catch(()=>{});
+
         },5000);
 
 
@@ -81,11 +92,13 @@ module.exports = (client) => {
 
 
 
+
       points[userId] -= COST;
 
 
 
-      const roll = Math.random() * 100;
+      const roll =
+        Math.random() * 100;
 
 
       let result;
@@ -97,7 +110,8 @@ module.exports = (client) => {
 
         await interaction.member.roles.add(
           SPECIAL_ROLE_ID
-        );
+        )
+        .catch(()=>{});
 
 
         result =
@@ -111,7 +125,8 @@ module.exports = (client) => {
 
         await interaction.member.roles.add(
           LUCK_ROLE_ID
-        );
+        )
+        .catch(()=>{});
 
 
         result =
@@ -125,6 +140,7 @@ module.exports = (client) => {
 
         points[userId] += 1000;
 
+
         result =
         "💎 זכית ב־1000 נקודות";
 
@@ -136,6 +152,7 @@ module.exports = (client) => {
 
         points[userId] += 500;
 
+
         result =
         "💎 זכית ב־500 נקודות";
 
@@ -146,6 +163,7 @@ module.exports = (client) => {
 
 
         points[userId] += 100;
+
 
         result =
         "💎 זכית ב־100 נקודות";
@@ -163,15 +181,18 @@ module.exports = (client) => {
       }
 
 
-      savePoints();
+
+      savePoints(points);
 
 
 
-      const msg = await interaction.reply({
+      await interaction.reply({
+
         content:
         `🎡 סובבת את הגלגל!\n\n${result}`,
-        ephemeral:true,
-        fetchReply:true
+
+        ephemeral:true
+
       });
 
 
@@ -179,79 +200,98 @@ module.exports = (client) => {
       setTimeout(() => {
 
         interaction.deleteReply()
-          .catch(()=>{});
+        .catch(()=>{});
 
       },5000);
 
 
 
     }
-
   );
 
 
 
 
-  client.on(
+
+
+  client.once(
     "ready",
     async () => {
 
 
       const channel =
-      await client.channels.fetch(
-        WHEEL_CHANNEL_ID
-      ).catch(()=>null);
+        await client.channels.fetch(
+          WHEEL_CHANNEL_ID
+        )
+        .catch(()=>null);
 
 
 
-      if (!channel) return;
+      if(!channel)
+        return;
 
 
 
       const messages =
-      await channel.messages.fetch({
-        limit:10
-      });
+        await channel.messages.fetch({
+          limit:10
+        });
 
 
 
       const exists =
-      messages.find(
-        m => m.author.id === client.user.id
-      );
+        messages.find(
+          m =>
+          m.author.id === client.user.id
+        );
 
 
-      if (exists) return;
+
+      if(exists)
+        return;
 
 
 
       const button =
-      new ButtonBuilder()
-      .setCustomId("spin")
-      .setLabel("🎡 סובב גלגל")
-      .setStyle(ButtonStyle.Primary);
+        new ButtonBuilder()
+
+        .setCustomId("spin")
+
+        .setLabel("🎡 סובב גלגל")
+
+        .setStyle(
+          ButtonStyle.Primary
+        );
 
 
 
       const row =
-      new ActionRowBuilder()
-      .addComponents(button);
+        new ActionRowBuilder()
+        .addComponents(button);
 
 
 
       const embed =
-      new EmbedBuilder()
-      .setTitle("🎡 גלגל המזל")
-      .setDescription(
-        "לחץ על הכפתור כדי לסובב!\n💎 מחיר: 1000 נקודות"
-      );
+        new EmbedBuilder()
+
+        .setTitle(
+          "🎡 גלגל המזל"
+        )
+
+        .setDescription(
+          "לחץ על הכפתור כדי לסובב!\n💎 מחיר: 1000 נקודות"
+        );
 
 
 
       channel.send({
+
         embeds:[embed],
+
         components:[row]
+
       });
+
 
 
     }
