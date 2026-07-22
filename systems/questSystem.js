@@ -24,63 +24,58 @@ module.exports = (client) => {
   const possibleQuests = [
 
     {
-      type:"chat",
-      text:"💬 שלח 10 הודעות איכותיות",
-      amount:10,
-      reward:100
+      type: "chat",
+      text: "💬 שלח 10 הודעות איכותיות",
+      amount: 10,
+      reward: 100
     },
 
     {
-      type:"voice",
-      text:"🎤 דבר 10 דקות בוויס",
-      amount:10,
-      reward:100
+      type: "voice",
+      text: "🎤 דבר 10 דקות בוויס",
+      amount: 10,
+      reward: 100
     },
 
-
     {
-      type:"chat",
-      text:"💬 שלח 30 הודעות איכותיות",
-      amount:30,
-      reward:250
+      type: "chat",
+      text: "💬 שלח 30 הודעות איכותיות",
+      amount: 30,
+      reward: 250
     },
 
-
     {
-      type:"voice",
-      text:"🎤 דבר 30 דקות בוויס",
-      amount:30,
-      reward:250
+      type: "voice",
+      text: "🎤 דבר 30 דקות בוויס",
+      amount: 30,
+      reward: 250
     },
 
-
     {
-      type:"chat",
-      text:"💬 שלח 60 הודעות איכותיות",
-      amount:60,
-      reward:500
+      type: "chat",
+      text: "💬 שלח 60 הודעות איכותיות",
+      amount: 60,
+      reward: 500
     },
 
-
     {
-      type:"voice",
-      text:"🎤 דבר שעה בוויס",
-      amount:60,
-      reward:500
+      type: "voice",
+      text: "🎤 דבר שעה בוויס",
+      amount: 60,
+      reward: 500
     }
 
   ];
 
 
 
-  function createQuests(){
+  function createQuests() {
 
-
-    let list =
-    [...possibleQuests]
-    .sort(
-      () => Math.random()-0.5
-    );
+    const list =
+      [...possibleQuests]
+      .sort(
+        () => Math.random() - 0.5
+      );
 
 
     return [
@@ -94,29 +89,43 @@ module.exports = (client) => {
 
 
 
-  function resetDaily(){
+  function getToday() {
+
+    return new Date()
+      .toLocaleDateString(
+        "he-IL",
+        {
+          timeZone: "Asia/Jerusalem"
+        }
+      );
+
+  }
 
 
-    const today =
-    new Date()
-    .toDateString();
 
 
 
-    if(
+  function resetDaily() {
+
+
+    const today = getToday();
+
+
+
+    if (
       quests.date !== today
-    ){
+    ) {
 
 
       quests = {
 
-        date:today,
+        date: today,
 
-        list:createQuests(),
+        list: createQuests(),
 
-        users:{},
+        users: {},
 
-        sent:false
+        sent: false
 
       };
 
@@ -135,56 +144,69 @@ module.exports = (client) => {
 
 
 
-  async function sendQuestMessage(){
+  async function sendQuestMessage() {
 
 
-    if(quests.sent)
+    if (
+      quests.sent
+    )
       return;
 
 
 
     const channel =
-    await client.channels.fetch(
-      QUEST_CHANNEL_ID
-    ).catch(()=>null);
+      await client.channels.fetch(
+        QUEST_CHANNEL_ID
+      )
+      .catch(
+        () => null
+      );
 
 
 
-    if(!channel)
+    if (!channel)
       return;
 
 
 
     const embed =
-    new EmbedBuilder()
+      new EmbedBuilder()
 
-    .setTitle("🎯 משימות יומיות")
-
-    .setDescription(
-
-      quests.list
-      .map(
-        (q,i)=>
-        `${i+1}. ${q.text}\n💎 פרס: ${q.reward}`
+      .setTitle(
+        "🎯 משימות יומיות"
       )
-      .join("\n\n")
 
-    )
+      .setDescription(
 
-    .setFooter({
-      text:
-      "המשימות מתחלפות כל יום ב־00:00"
-    });
+        quests.list
+        .map(
+          (q,i) =>
+          `${i + 1}. ${q.text}\n💎 פרס: ${q.reward} נקודות`
+        )
+        .join("\n\n")
+
+      )
+
+      .setFooter({
+
+        text:
+        "המשימות מתחלפות כל יום ב־00:00"
+
+      });
 
 
 
     await channel.send({
-      embeds:[embed]
+
+      embeds: [embed]
+
     });
 
 
 
-    quests.sent=true;
+    quests.sent = true;
+
+
 
     saveData(
       "quests.json",
@@ -200,25 +222,31 @@ module.exports = (client) => {
 
   client.once(
     "ready",
-    () => {
+    async () => {
+
 
       resetDaily();
 
-      sendQuestMessage();
+
+      await sendQuestMessage();
+
 
     }
   );
 
 
 
-  // בדיקה כל דקה אם הגיע 00:00
+
 
   setInterval(
-    () => {
+    async () => {
+
 
       resetDaily();
 
-      sendQuestMessage();
+
+      await sendQuestMessage();
+
 
     },
     60000
