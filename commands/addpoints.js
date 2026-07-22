@@ -1,32 +1,20 @@
-const {
-  SlashCommandBuilder
-} = require("discord.js");
+const { SlashCommandBuilder } = require("discord.js");
+const { loadData, saveData } = require("../utils/save");
 
-const {
-  loadData,
-  saveData
-} = require("../utils/save");
-
-
-const STAFF_ROLE_ID =
-"1524447926213017720";
+const OWNER_ID = "1243097719262941224";
 
 
 module.exports = {
 
   data: new SlashCommandBuilder()
-
     .setName("addpoints")
-
     .setDescription("הוספת נקודות למשתמש")
-
     .addUserOption(option =>
       option
         .setName("user")
         .setDescription("המשתמש")
         .setRequired(true)
     )
-
     .addIntegerOption(option =>
       option
         .setName("amount")
@@ -35,56 +23,36 @@ module.exports = {
     ),
 
 
-
   async execute(interaction) {
 
 
-    if (
-      !interaction.member.roles.cache.has(
-        STAFF_ROLE_ID
-      )
-    ) {
+    if (interaction.user.id !== OWNER_ID) {
 
       return interaction.reply({
-
-        content:
-        "❌ אין לך הרשאה להשתמש בפקודה",
-
-        ephemeral:true
-
+        content: "❌ אין לך הרשאה להשתמש בפקודה הזאת",
+        ephemeral: true
       });
 
     }
 
 
-
     const user =
-    interaction.options.getUser("user");
+      interaction.options.getUser("user");
 
 
     const amount =
-    interaction.options.getInteger("amount");
-
+      interaction.options.getInteger("amount");
 
 
     const points =
-    loadData(
-      "points.json",
-      {}
-    );
+      loadData("points.json", {});
 
 
-
-    if (!points[user.id]) {
-
+    if (!points[user.id])
       points[user.id] = 0;
-
-    }
-
 
 
     points[user.id] += amount;
-
 
 
     saveData(
@@ -93,25 +61,11 @@ module.exports = {
     );
 
 
-
-    const msg =
     await interaction.reply({
-
       content:
-      `✅ נוספו ${amount} נקודות ל־${user}`,
-
-      fetchReply:true
-
+      `✅ נוספו ${amount} נקודות ל־${user.username}`,
+      ephemeral: true
     });
-
-
-
-    setTimeout(() => {
-
-      msg.delete()
-      .catch(()=>{});
-
-    },2000);
 
 
   }
