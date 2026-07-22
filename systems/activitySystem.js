@@ -7,34 +7,28 @@ const {
 module.exports = (client) => {
 
 
-  let quests =
-    loadData(
-      "quests.json",
-      {}
-    );
-
-
   let points =
-    loadData(
-      "points.json",
-      {}
-    );
+    loadData("points.json", {});
+
+
+  let quests =
+    loadData("quests.json", {});
 
 
   let chatCount = {};
 
-  let voiceUsers = {};
+  // משתמשים שבאמת מדברים בוויס
+  let voiceSpeaking = {};
 
 
 
-  function addPoints(userId, amount){
+  function addPoints(userId, amount) {
+
+    if (!points[userId])
+      points[userId] = 0;
 
 
-    if(!points[userId])
-      points[userId]=0;
-
-
-    points[userId]+=amount;
+    points[userId] += amount;
 
 
     saveData(
@@ -46,28 +40,34 @@ module.exports = (client) => {
 
 
 
+
   async function completeQuest(
     user,
     quest,
     index
-  ){
+  ) {
 
 
-    if(!quests.users[user.id]){
+    if (!quests.users)
+      quests.users = {};
 
-      quests.users[user.id]={
-        completed:[]
+
+    if (!quests.users[user.id]) {
+
+      quests.users[user.id] = {
+        completed: []
       };
 
     }
 
 
+
     const data =
-    quests.users[user.id];
+      quests.users[user.id];
 
 
 
-    if(
+    if (
       data.completed.includes(index)
     )
       return;
@@ -92,7 +92,7 @@ module.exports = (client) => {
 
 
 
-    try{
+    try {
 
       await user.send(
 `🏆 השלמת משימה!
@@ -102,13 +102,15 @@ ${quest.text}
 💎 קיבלת ${quest.reward} נקודות`
       );
 
-    }catch{}
+    } catch {}
 
 
 
-    if(
+    // בונוס סיום הכול
+
+    if (
       data.completed.length === 3
-    ){
+    ) {
 
 
       addPoints(
@@ -117,13 +119,16 @@ ${quest.text}
       );
 
 
-      try{
+      try {
 
         await user.send(
-"👑 סיימת את כל המשימות!\n🎁 בונוס: +250 נקודות"
+`👑 סיימת את כל המשימות!
+
+🎁 בונוס:
++250 נקודות`
         );
 
-      }catch{}
+      } catch {}
 
     }
 
@@ -132,34 +137,41 @@ ${quest.text}
 
 
 
-  // 💬 הודעות
+  // 💬 הודעות צ'אט
 
   client.on(
     "messageCreate",
-    async message=>{
+    async message => {
 
 
-      if(message.author.bot)
+      if (message.author.bot)
         return;
 
 
 
       const words =
-      message.content
-      .trim()
-      .split(/\s+/);
+        message.content
+        .trim()
+        .split(/\s+/);
 
 
 
-      // לפחות 3 מילים
+      // פחות מ-3 מילים לא נחשב
 
-      if(words.length < 3)
+      if (
+        words.length < 3
+      )
         return;
 
 
 
-      if(!chatCount[message.author.id])
-        chatCount[message.author.id]=0;
+      if (
+        !chatCount[message.author.id]
+      ) {
+
+        chatCount[message.author.id] = 0;
+
+      }
 
 
 
@@ -168,14 +180,14 @@ ${quest.text}
 
 
       quests.list?.forEach(
-        async (quest,index)=>{
+        async (quest,index) => {
 
 
-          if(
-            quest.type==="chat" &&
+          if (
+            quest.type === "chat" &&
             chatCount[message.author.id]
             >= quest.amount
-          ){
+          ) {
 
 
             await completeQuest(
@@ -184,7 +196,9 @@ ${quest.text}
               index
             );
 
+
           }
+
 
         }
       );
@@ -196,32 +210,46 @@ ${quest.text}
 
 
 
-  // 🎤 כניסה לוויס
+
+  // 🎤 בדיקת דיבור בוויס
 
   client.on(
     "voiceStateUpdate",
-    (oldState,newState)=>{
+    (oldState,newState) => {
 
 
       const member =
-      newState.member ||
-      oldState.member;
+        newState.member ||
+        oldState.member;
 
 
-
-      if(!member || member.user.bot)
+      if (
+        !member ||
+        member.user.bot
+      )
         return;
 
 
 
-      if(newState.channel){
+      // התחיל לדבר
 
-        voiceUsers[member.id]=true;
+      if (
+        !oldState.suppress &&
+        newState.suppress
+      ) {
+
+        voiceSpeaking[member.id] = false;
 
       }
-      else{
 
-        delete voiceUsers[member.id];
+
+      // יש שינוי קול
+      if (
+        oldState.channelId ||
+        newState.channelId
+      ) {
+
+        voiceSpeaking[member.id] = true;
 
       }
 
@@ -232,76 +260,97 @@ ${quest.text}
 
 
 
+
   // כל דקה
 
   setInterval(
-    async ()=>{
+    async () => {
 
 
       quests =
-      loadData(
-        "quests.json",
-        {}
-      );
-
-
-
-      for(
-        const userId in voiceUsers
-      ){
-
-
-        if(!voiceUsers[userId])
-          continue;
-
-
-
-        const user =
-        await client.users.fetch(userId)
-        .catch(()=>null);
-
-
-
-        if(!user)
-          continue;
-
-
-
-        if(!voiceUsers[userId].minutes)
-          voiceUsers[userId].minutes=0;
-
-
-
-        voiceUsers[userId].minutes++;
-
-
-
-        quests.list?.forEach(
-          async (quest,index)=>{
-
-
-            if(
-              quest.type==="voice" &&
-              voiceUsers[userId].minutes
-              >= quest.amount
-            ){
-
-
-              await completeQuest(
-                user,
-                quest,
-                index
-              );
-
-
-            }
-
-
-          }
+        loadData(
+          "quests.json",
+          {}
         );
 
 
+
+      for (
+        const userId in voiceSpeaking
+      ) {
+
+
+        // אם דיבר בדקה הזאת
+
+        if (
+          voiceSpeaking[userId]
+        ) {
+
+
+          const user =
+            await client.users.fetch(
+              userId
+            ).catch(
+              () => null
+            );
+
+
+
+          if (!user)
+            continue;
+
+
+
+          if (
+            !voiceSpeaking[userId + "_minutes"]
+          ) {
+
+            voiceSpeaking[userId + "_minutes"] = 0;
+
+          }
+
+
+
+          voiceSpeaking[userId + "_minutes"]++;
+
+
+
+          quests.list?.forEach(
+            async (quest,index) => {
+
+
+              if (
+                quest.type === "voice" &&
+                voiceSpeaking[userId + "_minutes"]
+                >= quest.amount
+              ) {
+
+
+                await completeQuest(
+                  user,
+                  quest,
+                  index
+                );
+
+
+              }
+
+
+            }
+          );
+
+
+        }
+
+
+
+        // איפוס הדקה
+
+        voiceSpeaking[userId] = false;
+
+
       }
+
 
 
     },
